@@ -2,8 +2,7 @@ import requests
 
 
 def wkd2d(week_list, index):
-    if(index==1):
-        index = 8
+    index = int(index) % 7
     return "".join(week_list[int(index)-1].split('-'))
 
 
