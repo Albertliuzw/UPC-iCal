@@ -8,7 +8,7 @@ def wkd2d(week_list, index):
 def lessons2time(lessons):
     index = int((int(lessons[1]) - 1) / 2)
     hour = [['080000', '095000'], ['101000', '120000'], ['140000', '155000'], ['161000', '180000'],
-              ['190000', '215000']]
+              ['190000', '205000']]
     return hour[index]
 
 
