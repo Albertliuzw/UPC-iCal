@@ -1,3 +1,4 @@
+#by 张世琛
 import requests
 
 
@@ -21,14 +22,14 @@ login_data = {
 }
 course_url = "https://app.upc.edu.cn/timetable/wap/default/get-data"
 course_data = {
-    'year': '2018-2019',
-    'term': '2',
+    'year': '2019-2020',
+    'term': '1',
     'week': '1'
 }
 session = requests.session()
 r=session.post(url=login_url, data=login_data)
 
-f = open('kb.ics', 'w', encoding='utf-8')
+f = open('kb1.ics', 'w', encoding='utf-8')
 f.write(u"BEGIN:VCALENDAR\nVERSION:2.0\n")
 for week in range(1, 19):
     course_data['week'] = week
@@ -36,16 +37,14 @@ for week in range(1, 19):
     course_list = response.json()['d']['classes']
     date_list = response.json()['d']['weekdays']
     for course in course_list:
-        for item in course_list[course]:
-            if not isinstance(course_list[course][item],list):
-                hour = lessons2time(course_list[course][item]['lessons'])
-                day = wkd2d(date_list, course_list[course][item]['weekday'])
-                message = u'''BEGIN:VEVENT
+        hour = lessons2time(course['lessons'])
+        day = wkd2d(date_list,course['weekday'])
+        message = u'''BEGIN:VEVENT
 SUMMARY:%s
 DTSTART;TZID="UTC+08:00";VALUE=DATE-TIME:%sT%s
 DTEND;TZID="UTC+08:00";VALUE=DATE-TIME:%sT%s
 LOCATION:%s--%s
-END:VEVENT\n''' % (course_list[course][item]['course_name'], day, hour[0], day, hour[1], course_list[course][item]['location'], course_list[course][item]['teacher'])
-                f.write(message)
+END:VEVENT\n''' % (course['course_name'], day, hour[0], day, hour[1],course['location'],course['teacher'])
+        f.write(message)
 f.write(u"END:VCALENDAR")
 f.close()
