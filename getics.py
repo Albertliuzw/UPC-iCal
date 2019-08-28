@@ -1,50 +1,93 @@
-#by 张世琛
+#by田康康
+import datetime
+import json
+from datetime import date
+import datetime
+
 import requests
 
-
-def wkd2d(week_list, index):
-    return "".join(week_list[int(index)%7].split('-'))
-
-
-def lessons2time(lessons):
-    index = int((int(lessons[1]) - 1) / 2)
-    hour = [['080000', '095000'], ['101000', '120000'], ['140000', '155000'], ['161000', '180000'],
-              ['190000', '205000']]
-    return hour[index]
+n = 1
+date = datetime.datetime(2019, 9, 8)  # + datetime.timedelta(days=1)
 
 
-login_url = 'https://app.upc.edu.cn/uc/wap/login/check'
-username = input("学号:")
-passwd = input("数字石大密码:")
-login_data = {
-    'username': username,
-    'password': passwd,
-}
-course_url = "https://app.upc.edu.cn/timetable/wap/default/get-data"
-course_data = {
-    'year': '2019-2020',
-    'term': '1',
-    'week': '1'
-}
-session = requests.session()
-r=session.post(url=login_url, data=login_data)
+# print(date)
+# date = date(2019, 9, 8).time.__format__('%Y%m%d')
 
-f = open('kb1.ics', 'w', encoding='utf-8')
-f.write(u"BEGIN:VCALENDAR\nVERSION:2.0\n")
-for week in range(1, 19):
-    course_data['week'] = week
-    response = session.post(url=course_url, data=course_data)
-    course_list = response.json()['d']['classes']
-    date_list = response.json()['d']['weekdays']
-    for course in course_list:
-        hour = lessons2time(course['lessons'])
-        day = wkd2d(date_list,course['weekday'])
-        message = u'''BEGIN:VEVENT
+class JWXT:
+	def __init__(self, acount, pwd):
+		self.url = 'http://jwxt.upc.edu.cn/app.do?'
+		self.header = {
+			'User-Agent': 'Mozilla/5.0 (Linux; U; Mobile; Android 6.0.1;C107-9 Build/FRF91 )',
+			'Referer': 'http://www.baidu.com',
+			'accept-encoding': 'gzip, deflate, br',
+			'accept-language': 'zh-CN,zh-TW;q=0.8,zh;q=0.6,en;q=0.4,ja;q=0.2',
+			'cache-control': 'max-age=0'
+		}
+		self.number = acount
+		self.pwd = pwd
+		self.ss = self.login()
+
+	def login(self):
+		# http: // jwxt.xxxx.edu.cn / app.do?method = authUser & xh = {$学号} & pwd = {$密码}
+		# cong = requests.get(url).content
+		# print(cong)
+		params = {
+			"method": "authUser",
+			"xh": self.number,
+			"pwd": self.pwd
+		}
+		session = requests.session()
+		req = session.get(self.url, params = params, timeout = 5, headers = self.header)
+		s = json.loads(req.text)
+		print(s['msg'])
+		self.header['token'] = s['token']
+		return session
+
+	def getKbcxAzc(self, zc):
+		# s = json.loads(getCurrentTime())
+		params = {
+			"method": "getKbcxAzc",
+			# "xnxqid": s['xnxqh'], 选择学期，默认为当前学期
+			"zc": zc,
+			"xh": self.number
+		}
+		req = self.ss.get(self.url, params = params, headers = self.header)
+		#print(req.text)
+		return req.text
+
+	def timeTrans(self, time):
+		index = int((int(time[2]) - 1) / 2)
+		icstime = [['080000', '095000'], ['101000', '120000'], ['140000', '155000'], ['161000', '180000'],
+		           ['190000', '205000']]
+		return icstime[index]
+
+	def create_ics(self, f):
+		global date
+		for week in range(1, 20):
+			courses = json.loads(self.getKbcxAzc(week))
+			for index, course in enumerate(courses):
+				if course is None:
+					break
+				day = (date + datetime.timedelta(days = int(course['kcsj'][0]))).strftime('%Y%m%d')
+				hour = self.timeTrans(course['kcsj'])
+				message = '''BEGIN:VEVENT
 SUMMARY:%s
 DTSTART;TZID="UTC+08:00";VALUE=DATE-TIME:%sT%s
 DTEND;TZID="UTC+08:00";VALUE=DATE-TIME:%sT%s
 LOCATION:%s--%s
-END:VEVENT\n''' % (course['course_name'], day, hour[0], day, hour[1],course['location'],course['teacher'])
-        f.write(message)
+END:VEVENT\n''' % (
+					str(index + 1) + course['kcmc'], day, hour[0], day, hour[1], course['jsmc'], course['jsxm'])
+				f.write(message)
+			date += datetime.timedelta(days = 7)
+			print(date)
+
+
+number = input('请输入学号')
+pwd = input('请输入密码')
+print(date)
+jw = JWXT(number, pwd)
+f = open('kb1.ics', 'w', encoding = 'utf-8')
+f.write(u"BEGIN:VCALENDAR\nVERSION:2.0\n")
+jw.create_ics(f)
 f.write(u"END:VCALENDAR")
 f.close()
